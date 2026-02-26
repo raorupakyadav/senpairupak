@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENPAI.play</title>
+    <link rel="icon" type="image/png" href="https://uploads.onecompiler.io/44ejma9dg/44ejqe3ce/image-removebg-preview.png">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #bcff00;
+            --accent-dim: rgba(188, 255, 0, 0.1);
+            --bg: #050505;
+            --panel-bg: #0c0c0c;
+            --text: #ffffff;
+            --text-dim: #444;
+            --transition: all 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* Improved Scrollbar for Archives */
+        #playlist::-webkit-scrollbar, .col-tabs::-webkit-scrollbar { height: 2px; width: 3px; }
+        #playlist::-webkit-scrollbar-thumb, .col-tabs::-webkit-scrollbar-thumb { background: var(--accent); }
+        #playlist::-webkit-scrollbar-track, .col-tabs::-webkit-scrollbar-track { background: #111; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            height: 100vh;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }
+
+        .app-frame {
+            width: 98vw;
+            height: 94vh;
+            display: grid;
+            grid-template-columns: 80px 1fr 380px;
+            background: #151515;
+            gap: 1px;
+        }
+
+        .panel { background: var(--bg); padding: 40px; position: relative; overflow: hidden; }
+
+        /* Rail Nav */
+        .rail {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 0;
+            border-right: 1px solid #111;
+        }
+        .logo-vert {
+            font-family: 'Syne', sans-serif;
+            writing-mode: vertical-rl;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            transform: rotate(180deg);
+        }
+
+        /* Main Stage */
+        .main-stage { display: flex; flex-direction: column; justify-content: center; padding: 80px; }
+        
+        #display-name {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            text-transform: uppercase;
+            line-height: 0.8;
+            width: 100%;
+            z-index: 2;
+        }
+
+        /* Archive Panel Refactor */
+        .archive-panel { background: var(--panel-bg); display: flex; flex-direction: column; padding: 30px; }
+        
+        .col-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+        .col-title { font-size: 10px; color: var(--text-dim); letter-spacing: 3px; }
+        
+        .col-actions { display: flex; gap: 15px; }
+        .icon-btn {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-dim); transition: var(--transition);
+        }
+        .icon-btn:hover { color: var(--accent); transform: translateY(-2px); }
+
+        /* Improved Tab Slider */
+        .col-tabs {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1a1a1a;
+            scrollbar-width: thin;
+        }
+        .tab {
+            font-size: 10px;
+            color: var(--text-dim);
+            cursor: pointer;
+            white-space: nowrap;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: var(--transition);
+            padding: 5px 0;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .tab:hover { color: #fff; }
+
+        /* Playlist */
+        #playlist { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; }
+        .track-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 10px;
+            border-bottom: 1px solid #111;
+            cursor: pointer;
+            font-size: 11px;
+            color: #666;
+            transition: var(--transition);
+        }
+        .track-item:hover { background: var(--accent-dim); color: #fff; }
+        .track-item.active { color: var(--accent); border-left: 3px solid var(--accent); }
+        
+        .del-btn { opacity: 0; color: #ff3e3e; font-size: 9px; transition: 0.2s; }
+        .track-item:hover .del-btn { opacity: 1; }
+
+        /* Modern Add Button */
+        .add-zone {
+            border: 1px dashed #333;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .add-zone:hover { border-color: var(--accent); background: var(--accent-dim); }
+        .add-text { font-size: 10px; color: var(--accent); letter-spacing: 2px; font-weight: bold; }
+
+        /* Playback HUD */
+        .controls-row { display: flex; align-items: center; gap: 20px; margin-top: 40px; z-index: 2; }
+        .play-btn {
+            width: 60px; height: 60px;
+            background: var(--accent);
+            border: none; border-radius: 50%;
+            display: grid; place-items: center;
+            cursor: pointer; transition: var(--transition);
+        }
+        .play-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--accent-dim); }
+        
+        .seek-container { flex-grow: 1; height: 4px; background: #1a1a1a; cursor: pointer; position: relative; }
+        .seek-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s linear; }
+
+        /* Modal Theme */
+        #rename-overlay {
+            position: fixed; inset: 0;
+            background: rgba(5,5,5,0.95);
+            display: none; place-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-box input {
+            background: transparent; border: none;
+            border-bottom: 2px solid var(--accent);
+            color: var(--accent); font-family: 'Syne', sans-serif;
+            font-size: 3.5rem; text-align: center;
+            width: 70vw; outline: none; text-transform: uppercase;
+        }
+        .confirm-btn {
+            margin-top: 30px; color: var(--accent);
+            letter-spacing: 5px; cursor: pointer; font-size: 12px;
+            padding: 10px 20px; border: 1px solid var(--accent);
+            transition: var(--transition);
+        }
+        .confirm-btn:hover { background: var(--accent); color: #000; }
+
+        #visualizer {
+            position: absolute; top: 50%; left: 0;
+            transform: translateY(-50%); width: 100%; height: 60%;
+            z-index: 0; opacity: 0.4; pointer-events: none;
+        }
+
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="rename-overlay">
+    <div class="modal-box" style="display: flex; flex-direction: column; align-items: center;">
+        <input type="text" id="rename-input" spellcheck="false" maxlength="20">
+        <div class="confirm-btn" onclick="confirmRename()">EXECUTE_RENAME</div>
+    </div>
+</div>
+
+<div class="app-frame">
+    <div class="panel rail">
+        <div class="logo-vert">SENPAI // Rupak</div>
+        <div style="font-size: 10px; color: var(--accent);">V.4.5</div>
+    </div>
+
+    <div class="panel main-stage">
+        <canvas id="visualizer"></canvas>
+        <div id="display-container" style="min-height: 250px; display: flex; align-items: center;">
+            <h1 id="display-name">READY_</h1>
+        </div>
+        
+        <div class="controls-row">
+            <button class="play-btn" onclick="togglePlay()">
+                <svg id="play-icon" width="24" height="24" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="seek-container" id="seek-target">
+                <div class="seek-bar" id="seek-fill"></div>
+            </div>
+            <input type="range" style="width: 80px; accent-color: var(--accent);" min="0" max="1" step="0.05" value="0.8" id="vol-ctrl">
+        </div>
+    </div>
+
+    <div class="panel archive-panel">
+        <div class="col-header">
+            <div class="col-title">VAULT_COLLECTIONS</div>
+            <div class="col-actions">
+                <button class="icon-btn" onclick="openRename()" title="RENAME">
+                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg>
+                </button>
+                <button class="icon-btn" onclick="addNewCol()" title="NEW">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="col-tabs" id="tab-list"></div>
+    
+        <div id="playlist"></div>
+    
+        <label class="add-zone">
+            <div class="add-text">+ UPLOAD_TRACKS</div>
+            <input type="file" id="file-input" multiple accept="audio/*">
+        </label>
+    </div>
+</div>
+
+<audio id="audio" crossorigin="anonymous"></audio>
+
+<script>
+    let db, playlist = [], currentIdx = -1;
+    let audioCtx, analyser, dataArray;
+    
+    let collections = JSON.parse(localStorage.getItem('sp_cols')) || [{id: 0, name: "COLLECTION 01"}];
+    let activeCol = parseInt(localStorage.getItem('sp_active')) || 0;
+
+    const audio = document.getElementById('audio');
+    const display = document.getElementById('display-name');
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+
+    const req = indexedDB.open("SenpaiDB", 2);
+    req.onsuccess = e => { db = e.target.result; loadVault(); };
+    req.onupgradeneeded = e => {
+        const store = e.target.result.createObjectStore("tracks", { keyPath: "id", autoIncrement: true });
+        store.createIndex("colId", "colId", { unique: false });
+    };
+
+    async function loadVault() {
+        const tx = db.transaction("tracks", "readonly");
+        const store = tx.objectStore("tracks");
+        const index = store.index("colId");
+        const request = index.getAll(activeCol);
+        
+        request.onsuccess = () => {
+            playlist = request.result;
+            renderTabs();
+            renderTracks();
+            autoScaleText();
+        };
+    }
+
+    function renderTabs() {
+        const list = document.getElementById('tab-list');
+        list.innerHTML = collections.map(c => 
+            `<div class="tab ${c.id === activeCol ? 'active' : ''}" onclick="switchCol(${c.id})">${c.name}</div>`
+        ).join('');
+    }
+
+    function renderTracks() {
+        document.getElementById('playlist').innerHTML = playlist.map((t, i) => `
+            <div class="track-item ${i === currentIdx ? 'active' : ''}" onclick="playTrack(${i})">
+                <span>${t.name}</span>
+                <span class="del-btn" onclick="deleteTrack(event, ${t.id})">PURGE</span>
+            </div>
+        `).join('');
+    }
+
+    function switchCol(id) {
+        activeCol = id;
+        localStorage.setItem('sp_active', id);
+        currentIdx = -1;
+        loadVault();
+    }
+
+    function addNewCol() {
+        const id = Date.now();
+        collections.push({id, name: `NEW_VAULT_${collections.length + 1}`});
+        localStorage.setItem('sp_cols', JSON.stringify(collections));
+        switchCol(id);
+    }
+
+    function openRename() {
+        document.getElementById('rename-overlay').style.display = 'grid';
+        const input = document.getElementById('rename-input');
+        input.value = collections.find(c => c.id === activeCol).name;
+        input.focus();
+    }
+
+    function confirmRename() {
+        const val = document.getElementById('rename-input').value.toUpperCase();
+        if (val) {
+            collections = collections.map(c => c.id === activeCol ? {...c, name: val} : c);
+            localStorage.setItem('sp_cols', JSON.stringify(collections));
+            renderTabs();
+            document.getElementById('rename-overlay').style.display = 'none';
+        }
+    }
+
+    function playTrack(idx) {
+        currentIdx = idx;
+        const track = playlist[idx];
+        audio.src = URL.createObjectURL(track.data);
+        display.innerText = track.name;
+        renderTracks();
+        autoScaleText();
+        togglePlay(true);
+    }
+
+    function togglePlay(force) {
+        const icon = document.getElementById('play-icon');
+        if (audio.paused || force) {
+            audio.play().then(() => initVisualizer());
+            icon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        } else {
+            audio.pause();
+            icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+        }
+    }
+
+    document.getElementById('file-input').onchange = async e => {
+        const tx = db.transaction("tracks", "readwrite");
+        Array.from(e.target.files).forEach(f => {
+            tx.objectStore("tracks").add({
+                name: f.name.split('.')[0].toUpperCase(),
+                data: f,
+                colId: activeCol
+            });
+        });
+        tx.oncomplete = () => loadVault();
+    };
+
+    function deleteTrack(e, id) {
+        e.stopPropagation();
+        const tx = db.transaction("tracks", "readwrite");
+        tx.objectStore("tracks").delete(id);
+        tx.oncomplete = () => loadVault();
+    }
+
+    function initVisualizer() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        const src = audioCtx.createMediaElementSource(audio);
+        src.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        analyser.fftSize = 128;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        draw();
+    }
+
+    function draw() {
+        requestAnimationFrame(draw);
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        analyser.getByteFrequencyData(dataArray);
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const bw = (canvas.width / dataArray.length) * 2;
+        dataArray.forEach((v, i) => {
+            const bh = (v/255) * canvas.height;
+            ctx.fillStyle = `rgba(188, 255, 0, ${v/300})`;
+            ctx.fillRect(i * bw, canvas.height - bh, bw - 4, bh);
+        });
+    }
+
+    function autoScaleText() {
+        let size = 150;
+        display.style.fontSize = size + "px";
+        while (display.scrollWidth > display.parentElement.offsetWidth && size > 20) {
+            size -= 5;
+            display.style.fontSize = size + "px";
+        }
+    }
+
+    audio.ontimeupdate = () => {
+        const p = (audio.currentTime / audio.duration) * 100;
+        document.getElementById('seek-fill').style.width = p + '%';
+    };
+
+    document.getElementById('seek-target').onclick = e => {
+        audio.currentTime = (e.offsetX / e.currentTarget.clientWidth) * audio.duration;
+    };
+
+    document.getElementById('vol-ctrl').oninput = e => audio.volume = e.target.value;
+    window.onresize = autoScaleText;
+</script>
+
+</body>
+</html>
